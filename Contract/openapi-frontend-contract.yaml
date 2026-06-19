@@ -1,0 +1,1602 @@
+openapi: 3.0.3
+
+info:
+  title: College Timetable System — Frontend Interface Contract
+  version: 2.0.0
+  description: |
+    This OpenAPI contract defines the complete, authoritative interface between the React
+    frontend and the College Timetable System backend. It covers every request shape,
+    every response envelope, every error code, and every security requirement the UI
+    must handle.
+
+    ## Token Strategy
+    - The backend returns a short-lived `accessToken` in the JSON response body after login.
+    - The backend sets the long-lived `refreshToken` as a secure `HttpOnly` cookie automatically.
+    - The frontend stores `accessToken` in `sessionStorage` and sends it as a `Bearer` header.
+    - The frontend never reads or writes the `refreshToken` directly — the browser cookie handles it.
+
+    ## WebSocket
+    - Connection is established ONLY after the user lands on their role-specific dashboard.
+    - Rooms follow the pattern `room:sem_{N}_div_{X}` for students and `room:faculty` for teachers/admins.
+    - Real-time events silently increment the notification bell badge — no toast popups.
+
+    ## Role Hierarchy
+    | Role    | Access Level                                       |
+    |---------|----------------------------------------------------|
+    | Admin   | Full system access — all endpoints                 |
+    | Teacher | Timetable view, swaps, free slots, notifications   |
+    | Student | Timetable view (read-only), notifications          |
+
+servers:
+  - url: http://localhost:5000
+    description: Local Development Server
+  - url: https://api.college-timetable.com
+    description: Production Server
+
+# ─────────────────────────────────────────────
+# SECURITY SCHEMES
+# ─────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Send the short-lived access token retrieved from /api/auth/login.
+        Header format: `Authorization: Bearer <accessToken>`
+
+  # ─────────────────────────────────────────────
+  # REUSABLE SCHEMAS
+  # ─────────────────────────────────────────────
+  schemas:
+
+    # ── Auth ──────────────────────────────────
+    UserProfile:
+      type: object
+      description: Core profile returned for the authenticated user.
+      properties:
+        id:
+          type: string
+          example: "64f3c2a1b9e4d10012345678"
+        name:
+          type: string
+          example: "Alex Johnson"
+        email:
+          type: string
+          format: email
+          example: "teacher.alex@college.edu"
+        role:
+          type: string
+          enum: [Admin, Teacher, Student]
+          example: "Teacher"
+        semester:
+          type: integer
+          nullable: true
+          description: Populated only when role is Student.
+          example: 4
+        division:
+          type: string
+          nullable: true
+          description: Populated only when role is Student.
+          example: "A"
+        subjectsTaught:
+          type: array
+          nullable: true
+          description: Populated only when role is Teacher.
+          items:
+            type: string
+          example: ["Data Structures", "Algorithms"]
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: "teacher.alex@college.edu"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "SecurePass123!"
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: Short-lived JWT. Store in sessionStorage. Expires in ~15 minutes.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          $ref: '#/components/schemas/UserProfile'
+
+    RegisterRequest:
+      type: object
+      required: [name, email, password, role]
+      description: |
+        Admin-only. Role determines which additional fields are required:
+        - Teacher → `subjectsTaught` (array, required)
+        - Student → `semester` (integer, required) + `division` (string, required)
+      properties:
+        name:
+          type: string
+          example: "Priya Sharma"
+        email:
+          type: string
+          format: email
+          example: "priya.sharma@college.edu"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "Welcome@2024"
+        role:
+          type: string
+          enum: [Admin, Teacher, Student]
+          example: "Teacher"
+        subjectsTaught:
+          type: array
+          items:
+            type: string
+          example: ["Operating Systems", "Computer Networks"]
+        semester:
+          type: integer
+          minimum: 1
+          maximum: 8
+          example: 3
+        division:
+          type: string
+          example: "B"
+
+    BulkRegisterRequest:
+      type: object
+      required: [users]
+      description: |
+        Accepts a pre-parsed array from a CSV upload.
+        Frontend must parse the CSV client-side before sending this payload.
+        Each object in the array follows the same shape as RegisterRequest.
+      properties:
+        users:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/RegisterRequest'
+
+    BulkRegisterResponse:
+      type: object
+      properties:
+        totalSubmitted:
+          type: integer
+          example: 45
+        successCount:
+          type: integer
+          example: 43
+        failedRows:
+          type: array
+          description: Rows that failed validation. Frontend displays these in a summary table.
+          items:
+            type: object
+            properties:
+              rowIndex:
+                type: integer
+                example: 12
+              email:
+                type: string
+                example: "bad.email@"
+              reason:
+                type: string
+                example: "Invalid email format"
+
+    RefreshTokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: New short-lived JWT. Replace the old one in sessionStorage.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    # ── Timetable ─────────────────────────────
+    TimetableSlot:
+      type: object
+      description: A single slot in the resolved daily timetable view.
+      properties:
+        slotId:
+          type: string
+          example: "slot_001"
+        slotNumber:
+          type: integer
+          description: Lecture period number for the day (e.g., 1 = first period).
+          example: 3
+        dayOfWeek:
+          type: string
+          enum: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
+          example: "Monday"
+        startTime:
+          type: string
+          format: time
+          example: "10:00"
+        endTime:
+          type: string
+          format: time
+          example: "11:00"
+        subject:
+          type: string
+          example: "Data Structures"
+        teacherId:
+          type: string
+          example: "64f3c2a1b9e4d10012345678"
+        teacherName:
+          type: string
+          example: "Alex Johnson"
+        semester:
+          type: integer
+          example: 4
+        division:
+          type: string
+          example: "A"
+        isOverridden:
+          type: boolean
+          description: True if this slot was modified by a ScheduleException (swap or free slot).
+          example: false
+        isFreeLecture:
+          type: boolean
+          description: True if no teacher is assigned — slot is in the free pool.
+          example: false
+
+    CreateSlotRequest:
+      type: object
+      required: [dayOfWeek, slotNumber, startTime, endTime, subject, teacherId, semester, division]
+      properties:
+        dayOfWeek:
+          type: string
+          enum: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
+          example: "Wednesday"
+        slotNumber:
+          type: integer
+          minimum: 1
+          maximum: 8
+          example: 2
+        startTime:
+          type: string
+          format: time
+          example: "09:00"
+        endTime:
+          type: string
+          format: time
+          example: "10:00"
+        subject:
+          type: string
+          example: "Algorithms"
+        teacherId:
+          type: string
+          example: "64f3c2a1b9e4d10012345678"
+        semester:
+          type: integer
+          example: 4
+        division:
+          type: string
+          example: "A"
+        isPermanent:
+          type: boolean
+          default: true
+          description: If true, adds to the master weekly template. If false, one-time override.
+
+    UpdateSlotRequest:
+      type: object
+      description: All fields optional — send only what needs updating.
+      properties:
+        subject:
+          type: string
+          example: "Advanced Algorithms"
+        teacherId:
+          type: string
+          example: "64f3c2a1b9e4d10098765432"
+        startTime:
+          type: string
+          format: time
+          example: "10:00"
+        endTime:
+          type: string
+          format: time
+          example: "11:00"
+
+    TimetableViewResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          example: "2024-08-19"
+        semester:
+          type: integer
+          example: 4
+        division:
+          type: string
+          example: "A"
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimetableSlot'
+
+    TeacherWeeklyResponse:
+      type: object
+      description: Full weekly layout for a single teacher across all their assigned classes.
+      properties:
+        teacherId:
+          type: string
+          example: "64f3c2a1b9e4d10012345678"
+        teacherName:
+          type: string
+          example: "Alex Johnson"
+        weeklySlots:
+          type: object
+          description: Keys are day names; values are arrays of slots for that day.
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/TimetableSlot'
+          example:
+            Monday:
+              - slotId: "slot_001"
+                slotNumber: 1
+                subject: "Data Structures"
+                semester: 4
+                division: "A"
+
+    # ── Swaps ─────────────────────────────────
+    SwapSlotRef:
+      type: object
+      required: [slotNumber, dayOfWeek]
+      properties:
+        slotNumber:
+          type: integer
+          example: 3
+        dayOfWeek:
+          type: string
+          enum: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday]
+          example: "Monday"
+
+    CreateSwapRequest:
+      type: object
+      required: [receiverId, senderOriginalSlot, receiverOriginalSlot]
+      properties:
+        receiverId:
+          type: string
+          description: The teacher ID of the person receiving the swap request.
+          example: "64f3c2a1b9e4d10098765432"
+        senderOriginalSlot:
+          $ref: '#/components/schemas/SwapSlotRef'
+        receiverOriginalSlot:
+          $ref: '#/components/schemas/SwapSlotRef'
+        targetDate:
+          type: string
+          format: date
+          nullable: true
+          description: If null, the swap applies permanently to the master template.
+          example: "2024-08-22"
+        isPermanent:
+          type: boolean
+          default: false
+          example: false
+
+    CreateSwapResponse:
+      type: object
+      description: |
+        Returned immediately after submitting a swap. If `hasDominoConflict` is true,
+        the frontend must launch the multi-step Domino Warning Wizard modal.
+      properties:
+        swapRequestId:
+          type: string
+          example: "swap_78f3c2a1"
+        status:
+          type: string
+          enum: [Pending, Blocked]
+          description: Blocked means a hard conflict was detected and the swap was NOT saved.
+          example: "Pending"
+        hasDominoConflict:
+          type: boolean
+          description: |
+            Soft warning only — the swap IS saved as Pending, but the sender has a
+            conflict in another class. The wizard modal must present resolution options.
+          example: true
+        conflictDetails:
+          type: string
+          nullable: true
+          example: "Warning: This trade conflicts with your 4th Sem Div A lecture at Slot 3 on Monday."
+
+    SwapRecord:
+      type: object
+      description: Full representation of a swap request for history and pending views.
+      properties:
+        swapRequestId:
+          type: string
+          example: "swap_78f3c2a1"
+        senderId:
+          type: string
+          example: "64f3c2a1b9e4d10012345678"
+        senderName:
+          type: string
+          example: "Alex Johnson"
+        receiverId:
+          type: string
+          example: "64f3c2a1b9e4d10098765432"
+        receiverName:
+          type: string
+          example: "Priya Sharma"
+        senderOriginalSlot:
+          $ref: '#/components/schemas/SwapSlotRef'
+        receiverOriginalSlot:
+          $ref: '#/components/schemas/SwapSlotRef'
+        targetDate:
+          type: string
+          format: date
+          nullable: true
+          example: "2024-08-22"
+        isPermanent:
+          type: boolean
+          example: false
+        status:
+          type: string
+          enum: [Pending, Approved, Rejected]
+          example: "Pending"
+        hasDominoConflict:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-08-15T09:30:00Z"
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+          example: null
+
+    RespondSwapRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [Approved, Rejected]
+          example: "Approved"
+
+    RespondSwapResponse:
+      type: object
+      properties:
+        swapRequestId:
+          type: string
+          example: "swap_78f3c2a1"
+        status:
+          type: string
+          enum: [Approved, Rejected]
+          example: "Approved"
+        message:
+          type: string
+          example: "Swap approved. Timetable updated successfully."
+
+    # ── Free Slots ────────────────────────────
+    DeclareFreeSlotRequest:
+      type: object
+      required: [slotId, date]
+      properties:
+        slotId:
+          type: string
+          description: The master timetable slot the teacher will be absent from.
+          example: "slot_001"
+        date:
+          type: string
+          format: date
+          example: "2024-08-20"
+        reason:
+          type: string
+          nullable: true
+          description: Optional reason shown to other teachers in the marketplace.
+          example: "Conference attendance"
+
+    FreeSlotListing:
+      type: object
+      description: An unclaimed free lecture slot visible in the marketplace.
+      properties:
+        exceptionId:
+          type: string
+          example: "exc_abc123"
+        date:
+          type: string
+          format: date
+          example: "2024-08-20"
+        slotNumber:
+          type: integer
+          example: 3
+        startTime:
+          type: string
+          format: time
+          example: "10:00"
+        endTime:
+          type: string
+          format: time
+          example: "11:00"
+        subject:
+          type: string
+          example: "Data Structures"
+        originalTeacherId:
+          type: string
+          example: "64f3c2a1b9e4d10012345678"
+        originalTeacherName:
+          type: string
+          example: "Alex Johnson"
+        semester:
+          type: integer
+          example: 4
+        division:
+          type: string
+          example: "A"
+        reason:
+          type: string
+          nullable: true
+          example: "Conference attendance"
+
+    ClaimSlotResponse:
+      type: object
+      properties:
+        exceptionId:
+          type: string
+          example: "exc_abc123"
+        claimedBy:
+          type: string
+          description: Teacher ID of the claimer.
+          example: "64f3c2a1b9e4d10098765432"
+        message:
+          type: string
+          example: "Slot successfully claimed. Your timetable has been updated."
+
+    # ── Notifications ─────────────────────────
+    NotificationRecord:
+      type: object
+      properties:
+        notifId:
+          type: string
+          example: "notif_xyz789"
+        type:
+          type: string
+          enum: [SwapRequest, SwapResolved, FreeSlotDeclared, FreeSlotClaimed, TimetableUpdated, General]
+          description: |
+            Frontend uses this to render the appropriate icon and color in the bell dropdown.
+          example: "SwapRequest"
+        message:
+          type: string
+          example: "Alex Johnson has requested a swap with you for Monday Slot 3."
+        isRead:
+          type: boolean
+          example: false
+        targetRole:
+          type: string
+          enum: [Teacher, Student, All]
+          description: The audience this notification was broadcast to.
+          example: "Teacher"
+        relatedEntityId:
+          type: string
+          nullable: true
+          description: The swapRequestId, exceptionId, or slotId this notification relates to.
+          example: "swap_78f3c2a1"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-08-15T09:30:00Z"
+
+    NotificationsResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total count of notifications matching the filter (for pagination).
+          example: 34
+        unreadCount:
+          type: integer
+          description: |
+            Unread count for the current user. Frontend uses this to set the bell badge number.
+          example: 5
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationRecord'
+
+    # ── Shared Error Envelopes ────────────────
+    ErrorResponse:
+      type: object
+      description: Standard error shape returned for all 4xx and 5xx responses.
+      properties:
+        status:
+          type: integer
+          example: 403
+        error:
+          type: string
+          example: "Forbidden"
+        message:
+          type: string
+          example: "You do not have permission to perform this action."
+        timestamp:
+          type: string
+          format: date-time
+          example: "2024-08-15T09:30:00Z"
+
+    ValidationErrorResponse:
+      type: object
+      description: Returned when request body fails schema validation (422).
+      properties:
+        status:
+          type: integer
+          example: 422
+        error:
+          type: string
+          example: "Unprocessable Entity"
+        message:
+          type: string
+          example: "Validation failed for the submitted payload."
+        fields:
+          type: array
+          description: Per-field validation failures. Frontend highlights these inline in the form.
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "email"
+              issue:
+                type: string
+                example: "Must be a valid email address."
+
+    SuccessMessage:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Operation completed successfully."
+
+# ─────────────────────────────────────────────
+# GLOBAL SECURITY DEFAULT
+# ─────────────────────────────────────────────
+security:
+  - BearerAuth: []
+
+# ─────────────────────────────────────────────
+# PATHS
+# ─────────────────────────────────────────────
+paths:
+
+  # ════════════════════════════════════════════
+  # 🔐 AUTH
+  # ════════════════════════════════════════════
+
+  /api/auth/login:
+    post:
+      tags: [Authentication]
+      summary: Authenticate user and obtain tokens
+      description: |
+        Validates credentials. On success:
+        - Returns `accessToken` in the JSON body → store in `sessionStorage`.
+        - Backend automatically sets `refreshToken` as an `HttpOnly` cookie → no frontend action needed.
+
+        **Frontend UX:** On 401, display an inline form error. On success, decode the
+        `accessToken` (or use the `user` object) to determine which layout to route into.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful. Access token and user profile returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Invalid credentials. Show inline form error — do NOT expose which field is wrong.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 401
+                error: "Unauthorized"
+                message: "Invalid email or password."
+        '422':
+          description: Validation error (e.g., missing fields).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+  /api/auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user (Admin only)
+      description: |
+        Creates a single user. Password is hashed server-side — never store raw passwords.
+
+        **Role-based field requirements:**
+        - `Teacher` → `subjectsTaught` array is required.
+        - `Student` → `semester` (int) and `division` (string) are required.
+
+        **Frontend UX:** The admin form should dynamically show/hide fields based on
+        the selected role dropdown. On success, optionally clear the form and show a success toast.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          description: Role-specific required fields missing.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Caller is not an Admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email already registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 409
+                error: "Conflict"
+                message: "A user with this email already exists."
+        '422':
+          description: Validation errors on submitted fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+  /api/auth/register/bulk:
+    post:
+      tags: [Authentication]
+      summary: Bulk register users via parsed CSV (Admin only)
+      description: |
+        Accepts an array of user objects parsed client-side from a CSV file.
+
+        **Frontend flow:**
+        1. Admin uploads `.csv` in the drag-and-drop zone.
+        2. Frontend parses it (using `papaparse`) and maps rows to the `users` array.
+        3. Frontend sends this payload.
+        4. On response, display a summary table: total submitted, success count, and
+           a list of failed rows with their reasons so the admin can fix and re-upload.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkRegisterRequest'
+      responses:
+        '200':
+          description: |
+            Bulk operation completed. Even partial success returns 200.
+            Check `failedRows` for any entries that were rejected.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkRegisterResponse'
+        '400':
+          description: Entire payload is malformed or the `users` array is empty.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Caller is not an Admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/me:
+    get:
+      tags: [Authentication]
+      summary: Fetch the current user's profile
+      description: |
+        Decodes the Bearer JWT and returns the authenticated user's full profile.
+        Call this on app load (after reading `accessToken` from `sessionStorage`) to
+        restore the `AuthContext` state without requiring a fresh login.
+      responses:
+        '200':
+          description: Profile returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Token missing, expired, or invalid. Redirect to /login.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/refresh-token:
+    post:
+      tags: [Authentication]
+      summary: Exchange the HttpOnly cookie for a new access token
+      description: |
+        The browser automatically sends the `refreshToken` cookie.
+        No request body is required.
+
+        **Frontend UX:** Call this silently in the Axios response interceptor when any
+        API call returns 401. If this also fails (cookie expired), clear `sessionStorage`,
+        destroy `AuthContext`, show a 2-second error toast, then redirect to `/login`.
+      security: []
+      responses:
+        '200':
+          description: New access token issued. Replace the old one in sessionStorage.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+        '401':
+          description: Refresh token is expired or invalid. Force logout.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 401
+                error: "Unauthorized"
+                message: "Session expired. Please log in again."
+
+  /api/auth/logout:
+    post:
+      tags: [Authentication]
+      summary: Invalidate the current session
+      description: |
+        Blacklists the JWT server-side and clears the `HttpOnly` refresh cookie.
+
+        **Frontend flow:** After calling this, clear `sessionStorage`, reset `AuthContext`,
+        close the WebSocket connection, then navigate to `/login`.
+      responses:
+        '200':
+          description: Session invalidated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        '401':
+          description: No active session to invalidate.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ════════════════════════════════════════════
+  # 📅 TIMETABLE
+  # ════════════════════════════════════════════
+
+  /api/timetable/create:
+    post:
+      tags: [Timetable]
+      summary: Create a recurring master timetable slot (Admin only)
+      description: |
+        Adds a new lecture slot to the base weekly template (MasterTimetable).
+        The backend validates that the assigned teacher has no overlap at the same day/time.
+
+        **Frontend UX:** Launched from the structured form modal in the Admin panel.
+        On 409, display an inline conflict warning: "This teacher is already assigned
+        to another class at this time." Do NOT close the modal on conflict.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSlotRequest'
+      responses:
+        '201':
+          description: Slot created and added to the master schedule.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimetableSlot'
+        '403':
+          description: Caller is not an Admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Teacher conflict detected — overlapping slot at the same day and time.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 409
+                error: "Conflict"
+                message: "Teacher already has a class at Monday Slot 3."
+        '422':
+          description: Validation error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+  /api/timetable/update/{slotId}:
+    put:
+      tags: [Timetable]
+      summary: Update an existing master schedule slot (Admin only)
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "slot_001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSlotRequest'
+      responses:
+        '200':
+          description: Slot updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimetableSlot'
+        '403':
+          description: Caller is not an Admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Slot not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Teacher conflict on the updated values.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/timetable/delete/{slotId}:
+    delete:
+      tags: [Timetable]
+      summary: Delete a slot from the master schedule (Admin only)
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "slot_001"
+      responses:
+        '200':
+          description: Slot deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        '403':
+          description: Caller is not an Admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Slot not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/timetable/view:
+    get:
+      tags: [Timetable]
+      summary: Get the resolved daily timetable for a semester and division
+      description: |
+        The core view engine. Returns the master template merged with any
+        ScheduleExceptions (swaps, free slots) for the given date.
+
+        **Frontend UX:**
+        - Desktop: render as a multi-column grid table.
+        - Mobile: render as swipeable daily cards. The calendar picker tab bar
+          controls the `date` parameter.
+        - Slots with `isFreeLecture: true` should show a distinct visual state (e.g., dashed border).
+        - Slots with `isOverridden: true` should show a subtle override badge.
+      parameters:
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2024-08-19"
+        - name: semester
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 4
+        - name: division
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "A"
+      responses:
+        '200':
+          description: Resolved daily timetable returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimetableViewResponse'
+        '400':
+          description: Missing or invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/timetable/teacher/{teacherId}:
+    get:
+      tags: [Timetable]
+      summary: Get the full weekly schedule for a specific teacher
+      description: |
+        Returns all slots across the whole week for the given teacher.
+        Used to populate the Teacher dashboard's personal schedule tab.
+      parameters:
+        - name: teacherId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "64f3c2a1b9e4d10012345678"
+      responses:
+        '200':
+          description: Teacher's weekly schedule returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherWeeklyResponse'
+        '403':
+          description: Teachers can only fetch their own schedule unless Admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Teacher not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ════════════════════════════════════════════
+  # 🔄 SWAPS
+  # ════════════════════════════════════════════
+
+  /api/swaps:
+    post:
+      tags: [Swap Management]
+      summary: Initiate a swap request (Teachers only)
+      description: |
+        Submits a swap request between the authenticated teacher (sender) and another teacher (receiver).
+
+        **Conflict logic the backend runs:**
+        - **Hard block** (status: `Blocked`): The receiving teacher is already assigned to a class
+          at the sender's slot. Swap is NOT saved. Frontend shows a blocking error message.
+        - **Soft warning** (status: `Pending`, `hasDominoConflict: true`): The swap IS saved but
+          the sender has a conflict in another semester. Frontend MUST launch the multi-step
+          Domino Warning Wizard modal.
+
+        **Domino Wizard Steps:**
+        1. Display `conflictDetails` message clearly.
+        2. Offer two action buttons: [Declare Conflicting Slot as Free] or [Initiate Chain Swap].
+        3. Execute the chosen follow-up action without canceling the original swap.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSwapRequest'
+      responses:
+        '200':
+          description: |
+            Swap evaluated. Check `status` and `hasDominoConflict` to determine UI flow.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateSwapResponse'
+        '400':
+          description: Hard conflict — receiving teacher is unavailable. Swap blocked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 400
+                error: "Bad Request"
+                message: "Receiving teacher is already assigned to a class at that slot."
+        '403':
+          description: Caller is not a Teacher or Admin.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation error on the request body.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+
+  /api/swaps/{swapId}/respond:
+    post:
+      tags: [Swap Management]
+      summary: Approve or reject an incoming swap request (Teachers only)
+      description: |
+        The receiving teacher responds to a pending swap. If approved, the backend
+        executes an atomic transaction to swap the teachers on the timetable for that date.
+
+        **Frontend UX:** Available from the pending swaps list. After a successful
+        response, remove the card from the pending list and update the badge count.
+      parameters:
+        - name: swapId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "swap_78f3c2a1"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RespondSwapRequest'
+      responses:
+        '200':
+          description: Response recorded. If approved, timetable is updated atomically.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespondSwapResponse'
+        '403':
+          description: Caller is not the designated receiver for this swap.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Swap request not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Swap is no longer in Pending state (already resolved).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 409
+                error: "Conflict"
+                message: "This swap request has already been resolved."
+
+  /api/swaps/pending:
+    get:
+      tags: [Swap Management]
+      summary: List swap requests awaiting the current teacher's response
+      description: |
+        Returns all swap requests where the authenticated teacher is the **receiver**
+        and the status is `Pending`.
+
+        **Frontend UX:** Shown as action cards with [Approve] and [Reject] buttons.
+        The count of pending swaps can drive a secondary badge on the Swaps nav item.
+      responses:
+        '200':
+          description: List of pending swap requests.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SwapRecord'
+        '403':
+          description: Students cannot access swap endpoints.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/swaps/history:
+    get:
+      tags: [Swap Management]
+      summary: Get swap history for the current user
+      description: |
+        Returns resolved (Approved/Rejected) swap requests where the current teacher
+        was either the sender or receiver. Useful for auditing past changes.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          example: 20
+      responses:
+        '200':
+          description: Paginated swap history.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 12
+                  page:
+                    type: integer
+                    example: 1
+                  limit:
+                    type: integer
+                    example: 20
+                  records:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SwapRecord'
+        '403':
+          description: Students cannot access swap endpoints.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ════════════════════════════════════════════
+  # 🆓 FREE SLOTS
+  # ════════════════════════════════════════════
+
+  /api/free-slots/declare:
+    post:
+      tags: [Free Lecture Pool]
+      summary: Declare a slot as free due to absence (Teachers only)
+      description: |
+        Marks a teacher's upcoming slot as a free lecture, creating a ScheduleException
+        with `isFreeLecture: true` and no assigned teacher. The slot then appears in
+        the marketplace for other teachers to claim.
+
+        **Frontend UX:** Accessible from the teacher's personal weekly schedule.
+        A [Declare Absence] button on a slot card triggers this. On success,
+        the slot card should visually update to show "Awaiting Cover" state.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeclareFreeSlotRequest'
+      responses:
+        '201':
+          description: Free lecture declared. Slot is now in the marketplace.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FreeSlotListing'
+        '400':
+          description: Slot date is in the past or slot doesn't belong to this teacher.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Only Teachers can declare free slots.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Slot is already declared as free.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/free-slots/available:
+    get:
+      tags: [Free Lecture Pool]
+      summary: List unclaimed free slots in the marketplace
+      description: |
+        Returns all active, unclaimed free lecture slots for the given semester and date.
+        Filtered to show only slots relevant to semesters the requesting teacher teaches.
+
+        **Frontend UX:** Rendered as real-time filtering cards. Each card shows:
+        date, slot time, subject, original teacher's name, and a [Claim Slot] button.
+        While a claim is in-flight, the button must show a spinner and be disabled
+        to prevent double-claiming.
+      parameters:
+        - name: semester
+          in: query
+          required: true
+          schema:
+            type: integer
+          example: 4
+        - name: date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: If omitted, returns all upcoming free slots for the semester.
+          example: "2024-08-20"
+      responses:
+        '200':
+          description: List of unclaimed free lecture slots.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FreeSlotListing'
+        '400':
+          description: Missing or invalid query parameters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/free-slots/{exceptionId}/claim:
+    post:
+      tags: [Free Lecture Pool]
+      summary: Claim an open free lecture slot (Teachers only)
+      description: |
+        Assigns the authenticated teacher to the free slot, removing it from the marketplace.
+        The backend validates the claiming teacher has no schedule conflict at that time.
+
+        **Frontend UX:** Triggered by the [Claim Slot] button on a marketplace card.
+        On success, remove the card from the list and show a success banner.
+        On 409 (already claimed by someone else), refresh the list and show a message:
+        "This slot was just claimed by someone else."
+      parameters:
+        - name: exceptionId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "exc_abc123"
+      responses:
+        '200':
+          description: Slot claimed. Timetable updated for the claiming teacher.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimSlotResponse'
+        '400':
+          description: Claiming teacher has a schedule conflict at this time.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 400
+                error: "Bad Request"
+                message: "You already have a class scheduled at this time slot."
+        '403':
+          description: Only Teachers can claim free slots.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Free slot exception not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Slot has already been claimed by another teacher.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 409
+                error: "Conflict"
+                message: "This slot has already been claimed."
+
+  /api/free-slots/revoke/{exceptionId}:
+    delete:
+      tags: [Free Lecture Pool]
+      summary: Revoke a free slot declaration (Teachers only)
+      description: |
+        Cancels the teacher's own absence declaration.
+        **Blocked** if another teacher has already claimed the slot.
+
+        **Frontend UX:** Show a [Revoke] button only for slots the current teacher declared.
+        If the revoke returns 409 (already claimed), show a clear message:
+        "This slot has already been picked up by another teacher and cannot be revoked."
+      parameters:
+        - name: exceptionId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "exc_abc123"
+      responses:
+        '200':
+          description: Free slot declaration revoked. Slot returns to the master schedule.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        '403':
+          description: Teacher is not the original declarer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Exception not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Cannot revoke — another teacher has already claimed this slot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                status: 409
+                error: "Conflict"
+                message: "This slot has already been claimed and cannot be revoked."
+
+  # ════════════════════════════════════════════
+  # 🔔 NOTIFICATIONS
+  # ════════════════════════════════════════════
+
+  /api/notifications:
+    get:
+      tags: [Notifications]
+      summary: Retrieve paginated, role-filtered notifications
+      description: |
+        Returns the notification log for the authenticated user. Backend automatically
+        applies role-based filtering:
+        - Students: only see notifications for their semester/division.
+        - Teachers: see faculty-level broadcast notifications.
+        - Admins: see all notifications.
+
+        **Frontend UX:** Used to back-fill the notification bell dropdown on load
+        (WebSocket handles real-time increments). The `unreadCount` in the response
+        is the source of truth for the bell badge number on initial render.
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 20
+          example: 20
+        - name: unreadOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: If true, returns only unread notifications.
+          example: false
+      responses:
+        '200':
+          description: Paginated notification list with unread count.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationsResponse'
+
+  /api/notifications/{notifId}/read:
+    put:
+      tags: [Notifications]
+      summary: Mark a single notification as read
+      description: |
+        Sets `isRead: true` for the specified notification.
+
+        **Frontend UX:** Call this when the user clicks on a notification in the dropdown.
+        Decrement the bell badge count by 1 optimistically before the API responds.
+      parameters:
+        - name: notifId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "notif_xyz789"
+      responses:
+        '200':
+          description: Notification marked as read.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessMessage'
+        '404':
+          description: Notification not found or does not belong to current user.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/notifications/read-all:
+    put:
+      tags: [Notifications]
+      summary: Mark all unread notifications as read (bulk)
+      description: |
+        Sets `isRead: true` for every unread notification belonging to the current user.
+
+        **Frontend UX:** Triggered by a [Mark all as read] button in the notification dropdown.
+        After success, reset the bell badge count to 0.
+      responses:
+        '200':
+          description: All notifications marked as read.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updatedCount:
+                    type: integer
+                    description: Number of notifications that were updated.
+                    example: 5
+                  message:
+                    type: string
+                    example: "All 5 notifications marked as read."
+
+# ─────────────────────────────────────────────
+# TAGS (ordering in UI)
+# ─────────────────────────────────────────────
+tags:
+  - name: Authentication
+    description: Login, registration, token management, and session control.
+  - name: Timetable
+    description: Master schedule CRUD and the live resolved daily/weekly view engine.
+  - name: Swap Management
+    description: Teacher-to-teacher lecture hour exchange workflow with domino conflict detection.
+  - name: Free Lecture Pool
+    description: Absence declaration and the open slot marketplace for coverage.
+  - name: Notifications
+    description: Role-filtered notification log backed by the WebSocket real-time layer.

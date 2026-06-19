@@ -1,0 +1,317 @@
+{
+  "Message": "The college project",
+  "date": "2026-06-18T22:43:41.890Z",
+  "parentCommit": null,
+  "files": {
+    "Backend\\.env.example": {
+      "type": "full",
+      "hash": "515a7e132ec1f8a230a495c1a0c4816ae07d0436e7d9ba79deab23b9c93d957b",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\config\\db.js": {
+      "type": "full",
+      "hash": "71a1b36542c7ba2624a75267a10665b6260b2a5eab87da73c36e81d78f8f8c83",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\config\\socket.js": {
+      "type": "full",
+      "hash": "7f61f804018be6ae95b69af2ce5b30aa8b42a3765805b2ee38e181d1ae1ac72c",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\controllers\\authController.js": {
+      "type": "full",
+      "hash": "b81a279d7a114397f2025e48d0770591356c6ea114fba18c5653a9f90827b509",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\controllers\\freeSlotController.js": {
+      "type": "full",
+      "hash": "b042432e6bc1f3bfcc2375c3a9133923bbe4ea15cfeb841786b7f837d2cacc0f",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\controllers\\notificationController.js": {
+      "type": "full",
+      "hash": "712869b0dac8908844afe81a70aaa67523de69865346068fd5228ecd4e971270",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\controllers\\swapController.js": {
+      "type": "full",
+      "hash": "fadfa26c53d195541de44eafaad5e628575bb92f40e29a270b71f44f1ea4b980",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\controllers\\timetableController.js": {
+      "type": "full",
+      "hash": "78d527eaf709bc3d6b82b46e7ebbaedfac6c3f3293dcd28cdd72c1f7470de083",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\fixUsers.js": {
+      "type": "full",
+      "hash": "fa742bb5e7bbc2ffc9ccce377ee01c76e5b8a778972bf1d8bb7c5875b07fec5d",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\index.js": {
+      "type": "full",
+      "hash": "ef5afc1d4ed4ff882e9cb87a56172475069b93a681ffac806922efa1cf993e1a",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\middlewares\\authMiddleware.js": {
+      "type": "full",
+      "hash": "0b0ea6b64829fa917699ecb66f48ea2643ff9d1f4e55bd536beb74c859af1911",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\middlewares\\errorMiddleware.js": {
+      "type": "full",
+      "hash": "d8775805104670b1d30ec6058b0ccb1415f10ee8e4e73619c9105e9779270369",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\middlewares\\responseEnvelope.js": {
+      "type": "full",
+      "hash": "a83fdf0326f36e902b6477b7e27cce76afe5b8ae9402a9b11e8758e61c506449",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\models\\MasterTimetable.js": {
+      "type": "full",
+      "hash": "9aa5af168d589eab5f04ff20b3ae8d3bf3bae29aa8670cf5bfa957a5583a1b7d",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\models\\Notification.js": {
+      "type": "full",
+      "hash": "b7177733166dc7fe7f3f995a600c61cb0c73e4730e6fbc7628fedaa0cd0392af",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\models\\ScheduleException.js": {
+      "type": "full",
+      "hash": "b58e336e61988733e2fb009bc70dc7d773422b361a989094a917fdf8d849dbea",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\models\\SwapRequest.js": {
+      "type": "full",
+      "hash": "7b726ff947c4ea070462273752873ccf4dda98c9ef8908945b72f72e4b3ca281",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\models\\User.js": {
+      "type": "full",
+      "hash": "7f341bac27580e6a7a89cb2ec89f8b47c907458a0839095fda404cb8a7b7255f",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\package-lock.json": {
+      "type": "full",
+      "hash": "c50be025e4c2015f8885c2e3d1be9630a9f8204a9b1aa206d44d7140065d90b2",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\package.json": {
+      "type": "full",
+      "hash": "7ee272ccb08fd13ba2e641b7b9c0e99d422c4b1e89fd44a66eecca225c871996",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\routes\\authRoutes.js": {
+      "type": "full",
+      "hash": "51ca7d8075cc38c097f15992a97fa3eb00b1c9bfb265c18df7549aa8e4cc2c6a",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\routes\\freeSlotRoutes.js": {
+      "type": "full",
+      "hash": "b07ff780cc08207b4b95abc4cd639661da339477114df69e0760831d17fb50b6",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\routes\\notificationRoutes.js": {
+      "type": "full",
+      "hash": "49029c0708f28cb79383e6c06e0574df002138929421bd598d72ea8906166b3d",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\routes\\swapRoutes.js": {
+      "type": "full",
+      "hash": "bf37e31d46c001a349fd5b70a52aa261c64366086711748d25a09f41dd011645",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\routes\\timetableRoutes.js": {
+      "type": "full",
+      "hash": "1a3a7929b545466ab52718e56f686d6995688b239e6bbac946227d284d29be17",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\seedTimetable.js": {
+      "type": "full",
+      "hash": "f718edf40a6042198c28db7634e624e48149b04afe6d521ca0177157530617d6",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Backend\\seedUsers.js": {
+      "type": "full",
+      "hash": "77ef501a2f7082f52289616e8b249da3b2dd74efd8f86d1a2b64835c9065af68",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Contract\\generate_api_doc.js": {
+      "type": "full",
+      "hash": "8429494b6a2a1b60fa0a5e28f1c5fa86e2b915308cd47f168d8579f0f081d144",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Contract\\openapi-frontend-contract.yaml": {
+      "type": "full",
+      "hash": "9ee9b38cda7cf6c0f37f80ea3683a3b70e56c227336b4a8880dfe8b3568bb73f",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\.gitignore": {
+      "type": "full",
+      "hash": "fe718e7babb14f3cbad2d97f08889b9ce5215ed3fe0e43b2b8cfbfb3b9b844e8",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\dist\\assets\\index-BVoDsp2N.js": {
+      "type": "full",
+      "hash": "ea1ef16e012a08d98b10a03fefc2cc880f4199f00a3f9a62f4b5ff33c60b19c7",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\dist\\assets\\index-ChNP-D2M.css": {
+      "type": "full",
+      "hash": "076c84f59097eef2c2b463e1b96a1a78a41db6bc599bff0252e2944ee2d58377",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\dist\\favicon.svg": {
+      "type": "full",
+      "hash": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\dist\\icons.svg": {
+      "type": "full",
+      "hash": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\dist\\index.html": {
+      "type": "full",
+      "hash": "21ba638185fda7ad57162a9b6b5bd58fb0e805f27659a810bc3d71587b06e446",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\eslint.config.js": {
+      "type": "full",
+      "hash": "0197d9a843aaae267303c4d1ab1a43afad1afacc7646cdf6cf94a5af6b815fb8",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\index.html": {
+      "type": "full",
+      "hash": "bad2c3d5a3f9ea8f38c302ba2e8143b895452567aedfb58ab5fee723ddbaa5c4",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\package-lock.json": {
+      "type": "full",
+      "hash": "dc612cd3438dcc3450c7ff9ac81ef6a00f84fa1bbbbfbbbeecca3e13a66f936a",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\package.json": {
+      "type": "full",
+      "hash": "c6d3221088ecdcc5b5e90c3ae8d6c461cbec33a7fccdf278d35819e34de4fa0b",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\public\\favicon.svg": {
+      "type": "full",
+      "hash": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\public\\icons.svg": {
+      "type": "full",
+      "hash": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\README.md": {
+      "type": "full",
+      "hash": "a460b4dc7e6392e76aa54d844c9261b8db0adb7f967ba8300526456f1dcf5fb4",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\App.css": {
+      "type": "full",
+      "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\App.jsx": {
+      "type": "full",
+      "hash": "015cae32018655d303a844e5b2ef2cd079fa091af6b88b1f45bdb38cc3167440",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\components\\DeclareAbsenceModal.jsx": {
+      "type": "full",
+      "hash": "35fcc835bd641eb5f5c459bf9c9a30f525e88fa1818da356b65b115fc5634caa",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\components\\FreeSlotsTab.jsx": {
+      "type": "full",
+      "hash": "37b134ba460947d675dcaba884705d6eb904b0e8ab692ada850f24e01708b8e5",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\components\\InitiateSwapModal.jsx": {
+      "type": "full",
+      "hash": "5231d1d6e4263e479f5d0815fb73d77ede3c74351d667db33116df7d597f2178",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\components\\NotificationsTab.jsx": {
+      "type": "full",
+      "hash": "4218f8992910686d6f690c973a7c9d1445032b740cd7f0557d62a23c743fc7a9",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\components\\SlotCreationModal.jsx": {
+      "type": "full",
+      "hash": "8bcaac09c57e17973d943317d1c11c1b0b10a388276ef45b7cc22578d1c7fe89",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\components\\SwapRequestsTab.jsx": {
+      "type": "full",
+      "hash": "67ee0857807229827b3e7ff76347fd369ee3c628b8b87aff18cb332c125e02dc",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\context\\AuthContext.jsx": {
+      "type": "full",
+      "hash": "788694eb03722cd8c15397a172ad137677bb464f959df53091cac7f15d96c129",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\context\\SocketContext.jsx": {
+      "type": "full",
+      "hash": "dc61a51c7494725bc4153b078d4e327f37b9e2f9fd6118d4b9fed765c7b415b8",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\hooks\\useNotifications.js": {
+      "type": "full",
+      "hash": "aea95974a1dcba9c8ddedc5e8544ddf69ef0d573ab6d202cb6a66e433d90297f",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\index.css": {
+      "type": "full",
+      "hash": "2db0284aecef6c790f8c5d14452af61d26f263afacee9ec19b75936306058ddf",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\main.jsx": {
+      "type": "full",
+      "hash": "4b4b864dbe45253425d0c925337180ec07e204295179f80f59551216f466f618",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\pages\\AdminRegistration.jsx": {
+      "type": "full",
+      "hash": "406c9da2ff819aabd7eab5f821525d910ad7f61cea80974dbf2da3bb393ede98",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\pages\\Login.jsx": {
+      "type": "full",
+      "hash": "906465024aa2c1407e7b8a9b09d77430cf672d36577bee8dc81b031013df0582",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\pages\\TeacherDashboard.jsx": {
+      "type": "full",
+      "hash": "09eaed7e9e2021d39613971c54a46919dde260add15c0261de78b7b0c2e3c9e3",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\pages\\TimetableView.jsx": {
+      "type": "full",
+      "hash": "33ac8017aff432429f46e06159566ddedf560cbeae5fc7870d9e013b51a01c19",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\src\\services\\api.js": {
+      "type": "full",
+      "hash": "4cfb79203198c14c467c2dc160d37befd9b5814e7772cab30dfa50c344d1d98b",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "Frontend\\vite.config.js": {
+      "type": "full",
+      "hash": "4d36db3522a7b2dd10e0936e1004373c7ee65f10f7cd7920cd76410459c15a45",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    },
+    "package.json": {
+      "type": "full",
+      "hash": "4a6afe02f0994b4791cd29888ec9033501d1014b915d0702e46625988d9ed564",
+      "originalCommit": "b1b2b92c-9ac7-4167-9f2b-8e748b266c73"
+    }
+  }
+}
