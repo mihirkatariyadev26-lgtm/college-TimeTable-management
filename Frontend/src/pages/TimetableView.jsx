@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import SlotCreationModal from "../components/SlotCreationModal";
+import SlotEditModal from "../components/SlotEditModal";
 import InitiateSwapModal from "../components/InitiateSwapModal";
 import { useAuth } from "../context/AuthContext";
 // ─── Helpers ──────────────────────────────────────────────────
@@ -180,6 +181,7 @@ const DesktopGridView = ({
   onSlotClick,
   currentUserId,
   isTeacher,
+  isAdmin,
 }) => (
   <div className="tt-grid-wrapper">
     <div className="tt-grid">
@@ -215,9 +217,10 @@ const DesktopGridView = ({
                     slot={slot}
                     onSlotClick={(s) => onSlotClick(s, d)}
                     isClickable={
-                      isTeacher &&
-                      !slot.isFreeLecture &&
-                      slot.teacher?._id !== currentUserId
+                      (isTeacher &&
+                        !slot.isFreeLecture &&
+                        slot.teacher?._id !== currentUserId) ||
+                      (isAdmin && slot._id && !slot.isExceptionOverride)
                     }
                   />
                 ) : (
@@ -242,6 +245,7 @@ const MobileCardsView = ({
   onSlotClick,
   currentUserId,
   isTeacher,
+  isAdmin,
 }) => {
   const trackRef = useRef(null);
   const startXRef = useRef(null);
@@ -319,9 +323,10 @@ const MobileCardsView = ({
                 slot={slot}
                 onSlotClick={(s) => onSlotClick(s, weekDates[activeDay])}
                 isClickable={
-                  isTeacher &&
-                  !slot.isFreeLecture &&
-                  slot.teacher?._id !== currentUserId
+                  (isTeacher &&
+                    !slot.isFreeLecture &&
+                    slot.teacher?._id !== currentUserId) ||
+                  (isAdmin && slot._id && !slot.isExceptionOverride)
                 }
               />
             ) : (
@@ -377,7 +382,18 @@ const TimetableView = () => {
   const [swapTargetSlot, setSwapTargetSlot] = useState(null);
   const [swapDate, setSwapDate] = useState(null);
 
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editTargetSlot, setEditTargetSlot] = useState(null);
+  const [editDate, setEditDate] = useState(null);
+
   const handleSlotClick = (slot, dateObj) => {
+    if (isAdmin && slot._id && !slot.isExceptionOverride) {
+      setEditTargetSlot(slot);
+      setEditDate(dateObj);
+      setEditModalOpen(true);
+      return;
+    }
+
     if (!isTeacher) return;
     if (slot.isFreeLecture || slot.teacher?._id === currentUserId) return;
     setSwapTargetSlot(slot);
@@ -589,6 +605,7 @@ const TimetableView = () => {
                 onSlotClick={handleSlotClick}
                 currentUserId={currentUserId}
                 isTeacher={isTeacher}
+                isAdmin={isAdmin}
               />
             </div>
 
@@ -603,20 +620,35 @@ const TimetableView = () => {
                 onSlotClick={handleSlotClick}
                 currentUserId={currentUserId}
                 isTeacher={isTeacher}
+                isAdmin={isAdmin}
               />
             </div>
           </>
         )}
       </div>
 
-      {/* ── Admin slot creation modal ─────────────────────── */}
+      {/* ── Admin slot creation & edit modals ─────────────────────── */}
       {isAdmin && (
-        <SlotCreationModal
-          isOpen={modalOpen}
-          onClose={() => setModalOpen(false)}
-          onSuccess={handleSlotCreated}
-          prefill={{ semester, division }}
-        />
+        <>
+          <SlotCreationModal
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            onSuccess={handleSlotCreated}
+            prefill={{ semester, division }}
+          />
+          <SlotEditModal
+            isOpen={editModalOpen}
+            onClose={() => setEditModalOpen(false)}
+            onSuccess={(updatedSlot, action) => {
+              showToast(`Slot ${action} successfully!`, "success");
+              fetchWeek();
+            }}
+            slot={editTargetSlot}
+            dayOfWeek={editDate ? DAYS_FULL[editDate.getDay() - 1] : ''}
+            semester={semester}
+            division={division}
+          />
+        </>
       )}
 
       {/* ── Teacher Initiate Swap Modal ─────────────────────── */}

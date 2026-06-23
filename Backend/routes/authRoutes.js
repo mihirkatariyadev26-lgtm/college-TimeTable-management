@@ -7,6 +7,7 @@ import {
   listUsers,
   refreshToken,
   logoutUser,
+  deleteUser,
 } from '../controllers/authController.js';
 import { protect, checkRole } from '../middlewares/authMiddleware.js';
 
@@ -20,6 +21,7 @@ router.post('/refresh-token', refreshToken);
 router.post('/register',      protect, checkRole('Admin'), registerUser);
 router.post('/register/bulk', protect, checkRole('Admin'), bulkRegisterUsers);
 router.get('/users',          protect, checkRole('Admin'), listUsers);
+router.delete('/user/:id',    protect, checkRole('Admin'), deleteUser);
 
 // Protected routes (all authenticated)
 router.get('/me',             protect, getMe);

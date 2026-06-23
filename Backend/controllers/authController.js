@@ -276,3 +276,25 @@ export const logoutUser = async (req, res, next) => {
     return next(error);
   }
 };
+
+export const deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent admin from deleting themselves
+    if (req.user.id === id) {
+      return next(new AppError(ERROR_CODES.BAD_REQUEST, 'You cannot delete your own account', 400));
+    }
+
+    const userToDelete = await User.findById(id);
+    if (!userToDelete) {
+      return next(new AppError(ERROR_CODES.NOT_FOUND, 'User not found', 404));
+    }
+
+    await userToDelete.deleteOne();
+
+    return sendSuccess(res, null, 'User deleted successfully', 200);
+  } catch (error) {
+    return next(error);
+  }
+};

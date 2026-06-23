@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Papa from 'papaparse';
 import api from '../services/api';
@@ -75,6 +75,16 @@ const TrashIcon = () => (
     <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
     <path d="M10 11v6M14 11v6" />
     <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+  </svg>
+);
+
+const UsersIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
   </svg>
 );
 
@@ -577,6 +587,114 @@ const BulkUploadTab = () => {
   );
 };
 
+// ─── Manage Users Tab ─────────────────────────────────────────
+const ManageUsersTab = () => {
+  const { showToast, user: currentUser } = useAuth();
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.get('/api/auth/users');
+      setUsers(res.data?.data ?? res.data ?? []);
+    } catch (err) {
+      setError(err.response?.data?.message ?? 'Failed to fetch users.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const handleDelete = async (userToDelete) => {
+    if (!window.confirm(`Are you sure you want to delete user ${userToDelete.name}?`)) return;
+    try {
+      await api.delete(`/api/auth/user/${userToDelete._id}`);
+      showToast(`User ${userToDelete.name} deleted successfully`, 'success');
+      fetchUsers();
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Failed to delete user', 'error');
+    }
+  };
+
+  return (
+    <div className="manage-users-tab">
+      <div className="bulk-preview__header" style={{ marginBottom: '1rem' }}>
+        <h3 className="admin-panel__title" style={{ fontSize: '1.25rem' }}>Manage Registered Users</h3>
+        <button className="btn-text" onClick={fetchUsers} disabled={loading}>
+          {loading ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="reg-result-banner reg-result-banner--error">
+          <XCircleIcon /><span>{error}</span>
+        </div>
+      )}
+
+      {loading && !users.length ? (
+        <p>Loading users...</p>
+      ) : (
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Details</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(u => (
+                <tr key={u._id}>
+                  <td>{u.name}</td>
+                  <td className="td-mono">{u.email}</td>
+                  <td>
+                    <span className={`role-badge role-badge--${(u.role || '').toLowerCase()}`}>
+                      {u.role || '—'}
+                    </span>
+                  </td>
+                  <td className="td-mono td-muted">
+                    {u.role === 'Teacher' && ((u.subjectsTaught || []).join(', ') || '—')}
+                    {u.role === 'Student' && `Sem ${u.semester}, Div ${u.division}`}
+                    {u.role === 'Admin' && 'System Administrator'}
+                  </td>
+                  <td>
+                    {u._id !== currentUser?._id ? (
+                      <button 
+                        className="btn-icon btn-icon--danger" 
+                        onClick={() => handleDelete(u)}
+                        aria-label="Delete User"
+                        title="Delete User"
+                      >
+                        <TrashIcon />
+                      </button>
+                    ) : (
+                      <span className="td-muted" style={{ fontSize: '0.8rem' }}>Current</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {users.length === 0 && !loading && (
+                <tr>
+                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>No users found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Admin Registration Page ──────────────────────────────────
 const AdminRegistration = () => {
   const { user, logout } = useAuth();
@@ -636,12 +754,23 @@ const AdminRegistration = () => {
             >
               <UploadIcon /> Bulk CSV
             </button>
+            <button
+              id="tab-manage"
+              role="tab"
+              aria-selected={activeTab === 'manage'}
+              className={`tab-bar__tab ${activeTab === 'manage' ? 'tab-bar__tab--active' : ''}`}
+              onClick={() => setActiveTab('manage')}
+            >
+              <UsersIcon /> Manage Users
+            </button>
           </div>
         </div>
 
         {/* ── Tab Content ──────────────────────────────────── */}
         <div className="admin-panel__body" role="tabpanel">
-          {activeTab === 'single' ? <SingleRegisterTab /> : <BulkUploadTab />}
+          {activeTab === 'single' && <SingleRegisterTab />}
+          {activeTab === 'bulk' && <BulkUploadTab />}
+          {activeTab === 'manage' && <ManageUsersTab />}
         </div>
       </div>
     </div>

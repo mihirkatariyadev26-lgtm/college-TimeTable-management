@@ -1158,7 +1158,7 @@ const doc = new Document({
             new TableCell({
               borders: { ...noBorders(), bottom: border(C.blue, 6) },
               margins: { top: 0, bottom: 80, left: 0, right: 0 },
-              children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [txt('API Contract v1.0.0', { size: 18, color: C.gray })] })]
+              children: [new Paragraph({ alignment: AlignmentType.RIGHT, children: [txt('API Contract v1.0.0', { size:       18, color: C.gray })] })]
             })
           ]})]
         })]

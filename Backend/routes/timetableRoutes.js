@@ -3,6 +3,8 @@ import {
   createTimetableSlot,
   viewTimetable,
   getTeacherTimetable,
+  updateTimetableSlot,
+  deleteTimetableSlot,
 } from '../controllers/timetableController.js';
 import { protect, checkRole } from '../middlewares/authMiddleware.js';
 
@@ -16,5 +18,11 @@ router.get('/view', protect, viewTimetable);
 
 // 3. GET /api/timetable/teacher/:teacherId (Protected: Teachers & Admins Only)
 router.get('/teacher/:teacherId', protect, checkRole('Teacher', 'Admin'), getTeacherTimetable);
+
+// 4. PUT /api/timetable/update/:id (Protected: Admin Only)
+router.put('/update/:id', protect, checkRole('Admin'), updateTimetableSlot);
+
+// 5. DELETE /api/timetable/delete/:id (Protected: Admin Only)
+router.delete('/delete/:id', protect, checkRole('Admin'), deleteTimetableSlot);
 
 export default router;
