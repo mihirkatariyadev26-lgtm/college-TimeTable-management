@@ -15,8 +15,8 @@ import { responseFormatterMiddleware } from './middlewares/responseEnvelope.js';
 // Load environment variables
 dotenv.config();
 
-// Connect to MongoDB
-connectDB();
+// Do not accept requests until the database connection is ready.
+await connectDB();
 
 const app = express();
 const server = createServer(app);

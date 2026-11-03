@@ -7,13 +7,9 @@
  */
 
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
 import User from './models/User.js';
 import MasterTimetable from './models/MasterTimetable.js';
-
-dotenv.config();
-
-const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/timetable_db';
+import connectDB from './config/db.js';
 
 // ── Slot time map (for reference only, not stored) ────────────
 const SLOT_TIMES = {
@@ -26,14 +22,19 @@ const SLOT_TIMES = {
 };
 
 async function seed() {
-  await mongoose.connect(MONGO_URI);
-  console.log('✅ MongoDB connected:', MONGO_URI);
+  await connectDB();
 
   // ── Fetch teacher IDs from DB ─────────────────────────────
-  const jane  = await User.findOne({ email: 'jane.smith@college.edu' });
+  let jane = await User.findOne({ email: 'jane.smith@college.edu' });
   if (!jane) {
-    console.error('❌ Teacher jane.smith@college.edu not found. Run fixUsers.js first.');
-    process.exit(1);
+    jane = await new User({
+      name: 'Dr. Jane Smith',
+      email: 'jane.smith@college.edu',
+      password: 'password123',
+      role: 'Teacher',
+      subjectsTaught: ['Mathematics', 'Physics'],
+    }).save();
+    console.log('➕ Created teacher: jane.smith@college.edu');
   }
 
   // Create a second teacher if not present
