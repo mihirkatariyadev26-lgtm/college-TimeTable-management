@@ -1,12 +1,13 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
+import { getAllowedOrigins } from './cors.js';
 
 let io;
 
 export const initSocket = (server) => {
   io = new Server(server, {
     cors: {
-      origin: '*', // Adjust to match frontend domain in production
+      origin: getAllowedOrigins(),
       methods: ['GET', 'POST'],
     },
   });

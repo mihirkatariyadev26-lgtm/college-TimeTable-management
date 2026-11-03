@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
 import connectDB from './config/db.js';
+import { getAllowedOrigins } from './config/cors.js';
 import { initSocket } from './config/socket.js';
 import authRoutes from './routes/authRoutes.js';
 import timetableRoutes from './routes/timetableRoutes.js';
@@ -26,7 +27,7 @@ initSocket(server);
 
 // Global Middlewares
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: getAllowedOrigins(),
   credentials: true,
 }));
 app.use(express.json());
